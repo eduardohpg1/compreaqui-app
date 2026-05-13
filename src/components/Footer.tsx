@@ -86,6 +86,16 @@ export default function Footer() {
               </svg>
             </a>
             <a
+              href={siteConfig.mercadolivre}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-[#ffe600] hover:border-transparent transition-all group hover:-translate-y-0.5"
+            >
+              <svg className="w-5 h-5 text-white/40 group-hover:text-[#333]  transition-colors" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 0C5.374 0 0 5.373 0 12c0 6.628 5.374 12 12 12 6.628 0 12-5.372 12-12 0-6.627-5.372-12-12-12zm0 2.4c5.302 0 9.6 4.298 9.6 9.6 0 5.303-4.298 9.6-9.6 9.6-5.303 0-9.6-4.297-9.6-9.6 0-5.302 4.297-9.6 9.6-9.6zm0 3.6c-1.26 0-2.4.96-2.4 2.4v3.12c-.72.36-1.2 1.08-1.2 1.92 0 1.2.96 2.16 2.16 2.16s2.16-.96 2.16-2.16c0-.84-.48-1.56-1.2-1.92V8.4c0-.24.12-.36.48-.36s.48.12.48.36v.72h2.4V8.4C14.88 6.96 13.5 6 12 6zm-4.8 3.6v1.2h1.2V9.6H7.2zm9.6 0v1.2h1.2V9.6h-1.2zM6 13.2c0 3.312 2.688 6 6 6s6-2.688 6-6H6z"/>
+              </svg>
+            </a>
+            <a
               href={siteConfig.tiktok}
               target="_blank"
               rel="noopener noreferrer"

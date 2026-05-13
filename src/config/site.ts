@@ -11,6 +11,7 @@ export const siteConfig = {
   facebook: "https://www.facebook.com/share/1Cj7EPLnJf/?mibextid=wwXIfr",
   kwai: "https://k.kwai.com/u/@Alexiaachadinhos/BICK0x3Q",
   threads: "https://www.threads.com/@alexia_compreaqui2?igshid=NTc4MTIwNjQ2YQ==",
+  mercadolivre: "https://www.mercadolivre.com.br/social/fral3841443",
   email: "contato@alexiacompreaqui.com",
   profileImage: "/images/2.jpeg",
   heroImage: "/images/hero-bg.jpg",
