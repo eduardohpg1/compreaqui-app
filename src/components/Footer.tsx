@@ -63,9 +63,7 @@ export default function Footer() {
               rel="noopener noreferrer"
               className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-[#ff6900] hover:border-transparent transition-all group hover:-translate-y-0.5"
             >
-              <svg className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M17.2 0h-3.4v15.6c0 1.7-1.4 3.1-3.1 3.1s-3.1-1.4-3.1-3.1 1.4-3.1 3.1-3.1c.4 0 .7.1 1.1.2V9.1c-.4-.1-.7-.1-1.1-.1C5.7 9 2 12.7 2 17.3S5.7 24 10.7 24s8.7-3.9 8.7-8.7V8.1l3.4 2.3V6.5L17.2 4V0z"/>
-              </svg>
+              <span className="text-white/40 group-hover:text-white transition-colors font-black text-sm leading-none" style={{ fontStyle: "italic" }}>Kw</span>
             </a>
             <a
               href={siteConfig.threads}
