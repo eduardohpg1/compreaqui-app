@@ -7,7 +7,8 @@ export const siteConfig = {
   whatsappMessage:
     "Ofertas exclusivas, promoções relâmpago e novidades diretamente no seu WhatsApp.",
   instagram: "https://instagram.com/alexia_compreaqui",
-  tiktok: "https://tiktok.com/@alexia_compreaqui",
+  tiktok: "https://www.tiktok.com/@alexiafreitas10?_r=1&_t=ZS-96Kl2bTqFPw",
+  facebook: "https://www.facebook.com/share/1Cj7EPLnJf/?mibextid=wwXIfr",
   email: "contato@alexiacompreaqui.com",
   profileImage: "/images/2.jpeg",
   heroImage: "/images/hero-bg.jpg",
