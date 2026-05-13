@@ -1,3 +1,10 @@
 {
-  "language": "portuguese"
+  "language": "portuguese",
+  "permissions": {
+    "allow": [
+      "Bash(git push*)",
+      "Bash(git commit*)",
+      "Bash(git add*)"
+    ]
+  }
 }

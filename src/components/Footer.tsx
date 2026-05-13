@@ -58,6 +58,16 @@ export default function Footer() {
               </svg>
             </a>
             <a
+              href={siteConfig.kwai}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-[#ff6900] hover:border-transparent transition-all group hover:-translate-y-0.5"
+            >
+              <svg className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm4.5 16.5l-6-4.5V8.25L16.5 12l-6 4.5V12l6-4.5v9z"/>
+              </svg>
+            </a>
+            <a
               href={siteConfig.instagram}
               target="_blank"
               rel="noopener noreferrer"
