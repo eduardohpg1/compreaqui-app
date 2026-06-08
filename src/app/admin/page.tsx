@@ -30,7 +30,6 @@ const emptyForm = {
 
 export default function AdminPage() {
   const router = useRouter();
-  const supabase = createClient();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,15 +55,16 @@ export default function AdminPage() {
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
+    const supabase = createClient();
     const { data } = await supabase.from("products").select("*").order("created_at", { ascending: false });
     setProducts(data || []);
     setLoading(false);
-  }, [supabase]);
+  }, []);
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
-  async function handleLogout() {
-    await supabase.auth.signOut();
+  function handleLogout() {
+    document.cookie = "sb-ijvqpcllvjuqghcrqfoz-auth-token=; path=/; max-age=0";
     router.push("/admin/login");
   }
 
@@ -103,6 +103,7 @@ export default function AdminPage() {
       is_highlight: form.is_highlight,
     };
 
+    const supabase = createClient();
     let error;
     if (editingId) {
       ({ error } = await supabase.from("products").update(payload).eq("id", editingId));
@@ -134,6 +135,7 @@ export default function AdminPage() {
   }
 
   async function handleDelete(id: number) {
+    const supabase = createClient();
     const { error } = await supabase.from("products").delete().eq("id", id);
     setDeleteConfirm(null);
     if (error) { showToast("Erro ao excluir.", "error"); return; }
