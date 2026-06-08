@@ -35,8 +35,7 @@ export default function CatalogSection() {
         if (error) console.error("Erro ao carregar produtos:", error.message);
         setProducts(data || []);
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      });
   }, []);
 
   // Volta para página 1 ao buscar
