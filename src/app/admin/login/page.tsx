@@ -34,7 +34,8 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok || !data.access_token) {
-        setError("E-mail ou senha incorretos.");
+        console.error("Auth error:", res.status, JSON.stringify(data));
+        setError(`Erro ${res.status}: ${data.msg || data.error_description || "E-mail ou senha incorretos."}`);
         setLoading(false);
         return;
       }
