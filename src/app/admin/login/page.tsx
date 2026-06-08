@@ -18,17 +18,42 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    try {
+      const res = await fetch(
+        "https://ijvqpcllvjuqghcrqfoz.supabase.co/auth/v1/token?grant_type=password",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": "sb_publishable_RM6a72wALQDNFV5wPoC1Dg_HPAqzEEC",
+          },
+          body: JSON.stringify({ email, password }),
+        }
+      );
 
-    if (error) {
-      setError("E-mail ou senha incorretos.");
+      const data = await res.json();
+
+      if (!res.ok || !data.access_token) {
+        setError("E-mail ou senha incorretos.");
+        setLoading(false);
+        return;
+      }
+
+      // Salva o token em cookie para o proxy conseguir ler
+      document.cookie = `sb-ijvqpcllvjuqghcrqfoz-auth-token=${JSON.stringify({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        expires_at: Math.floor(Date.now() / 1000) + data.expires_in,
+        token_type: data.token_type,
+        user: data.user,
+      })}; path=/; max-age=${data.expires_in}; SameSite=Lax`;
+
+      router.push("/admin");
+      router.refresh();
+    } catch {
+      setError("Erro ao conectar. Tente novamente.");
       setLoading(false);
-      return;
     }
-
-    router.push("/admin");
-    router.refresh();
   }
 
   return (
