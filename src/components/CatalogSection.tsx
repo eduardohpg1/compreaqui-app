@@ -31,10 +31,12 @@ export default function CatalogSection() {
       .from("products")
       .select("*")
       .order("created_at", { ascending: false })
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) console.error("Erro ao carregar produtos:", error.message);
         setProducts(data || []);
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   }, []);
 
   // Volta para página 1 ao buscar
