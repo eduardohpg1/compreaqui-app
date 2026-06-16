@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
-  Plus, Pencil, Trash2, LogOut, ShoppingBag, Loader2, X, Save, ExternalLink, Package, ImageUp,
+  Plus, Pencil, Trash2, LogOut, ShoppingBag, Loader2, X, Save, ExternalLink, Package, ImageUp, Play,
 } from "lucide-react";
+
 interface Product {
   id: number;
   name: string;
@@ -13,6 +14,7 @@ interface Product {
   price: string | null;
   original_price: string | null;
   image: string;
+  media: string[] | null;
   affiliate_link: string;
   badge: string | null;
   is_highlight: boolean;
@@ -22,7 +24,7 @@ const emptyForm = {
   name: "",
   price: "",
   original_price: "",
-  image: "",
+  media: [] as string[],
   affiliate_link: "",
   badge: "",
   is_highlight: false,
@@ -39,7 +41,8 @@ export default function AdminPage() {
   const [form, setForm] = useState(emptyForm);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
-  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const mediaInputRef = useRef<HTMLInputElement>(null);
 
   function maskCurrency(value: string) {
     const digits = value.replace(/\D/g, "");
@@ -75,11 +78,17 @@ export default function AdminPage() {
   }
 
   function openEdit(p: Product) {
+    const existingMedia: string[] = [];
+    if (p.media && p.media.length > 0) {
+      existingMedia.push(...p.media);
+    } else if (p.image) {
+      existingMedia.push(p.image);
+    }
     setForm({
       name: p.name,
       price: p.price || "",
       original_price: p.original_price || "",
-      image: p.image,
+      media: existingMedia,
       affiliate_link: p.affiliate_link,
       badge: p.badge || "",
       is_highlight: p.is_highlight,
@@ -97,7 +106,8 @@ export default function AdminPage() {
       description: "",
       price: form.price || null,
       original_price: form.original_price || null,
-      image: form.image,
+      image: form.media[0] || "",
+      media: form.media,
       affiliate_link: form.affiliate_link,
       badge: form.badge || null,
       is_highlight: form.is_highlight,
@@ -119,19 +129,38 @@ export default function AdminPage() {
     fetchProducts();
   }
 
-  async function handleImageUpload(file: File) {
-    setUploadingImage(true);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const base64 = e.target?.result as string;
-      setForm((f) => ({ ...f, image: base64 }));
-      setUploadingImage(false);
-    };
-    reader.onerror = () => {
-      showToast("Erro ao ler a imagem.", "error");
-      setUploadingImage(false);
-    };
-    reader.readAsDataURL(file);
+  async function handleMediaUpload(files: FileList) {
+    setUploadingMedia(true);
+    const results: string[] = [];
+    const errors: string[] = [];
+
+    await Promise.all(Array.from(files).map((file) =>
+      new Promise<void>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const base64 = e.target?.result as string;
+          results.push(base64);
+          resolve();
+        };
+        reader.onerror = () => {
+          errors.push(file.name);
+          resolve();
+        };
+        reader.readAsDataURL(file);
+      })
+    ));
+
+    if (errors.length) showToast(`Erro ao ler: ${errors.join(", ")}`, "error");
+    if (results.length) setForm((f) => ({ ...f, media: [...f.media, ...results] }));
+    setUploadingMedia(false);
+  }
+
+  function removeMedia(index: number) {
+    setForm((f) => ({ ...f, media: f.media.filter((_, i) => i !== index) }));
+  }
+
+  function isVideo(dataUrl: string) {
+    return dataUrl.startsWith("data:video/");
   }
 
   async function handleDelete(id: number) {
@@ -205,9 +234,28 @@ export default function AdminPage() {
             {products.map((p) => (
               <div key={p.id} className="bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden hover:border-neutral-700 transition-colors">
                 <div className="relative aspect-square bg-neutral-800">
-                  {p.image && (
+                  {(() => {
+                    const thumb = (p.media && p.media.length > 0) ? p.media[0] : p.image;
+                    if (!thumb) return null;
+                    if (thumb.startsWith("data:video/")) {
+                      return (
+                        <div className="relative w-full h-full">
+                          <video src={thumb} className="w-full h-full object-cover" muted playsInline />
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="bg-black/50 rounded-full p-2">
+                              <Play className="w-5 h-5 text-white fill-white" />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                    return <img src={thumb} alt={p.name} className="w-full h-full object-cover" />;
+                  })()}
+                  {p.media && p.media.length > 1 && (
+                    <span className="absolute bottom-1.5 right-1.5 bg-black/70 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                      +{p.media.length - 1}
+                    </span>
                   )}
                   {p.badge && (
                     <span className="absolute top-2 left-2 bg-pink-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
@@ -309,38 +357,72 @@ export default function AdminPage() {
                 />
               </div>
 
-              {/* Upload de imagem */}
+              {/* Upload de mídia */}
               <div>
-                <label className="text-neutral-400 text-xs font-medium mb-1.5 block">Imagem do produto *</label>
-                <label className={`flex flex-col items-center justify-center w-full border-2 border-dashed rounded-xl cursor-pointer transition-colors ${form.image ? "border-pink-500 bg-pink-500/5" : "border-neutral-700 bg-neutral-800 hover:border-pink-500/50"}`}>
-                  {uploadingImage ? (
+                <label className="text-neutral-400 text-xs font-medium mb-1.5 block">
+                  Imagens e vídeos *
+                  <span className="ml-2 text-neutral-600 font-normal">({form.media.length} arquivo{form.media.length !== 1 ? "s" : ""})</span>
+                </label>
+
+                {/* Galeria de miniaturas */}
+                {form.media.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    {form.media.map((src, i) => (
+                      <div key={i} className="relative group aspect-square rounded-xl overflow-hidden bg-neutral-800 border border-neutral-700">
+                        {isVideo(src) ? (
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <video src={src} className="w-full h-full object-cover" muted playsInline />
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <div className="bg-black/50 rounded-full p-1.5">
+                                <Play className="w-4 h-4 text-white fill-white" />
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={src} alt={`mídia ${i + 1}`} className="w-full h-full object-cover" />
+                        )}
+                        {i === 0 && (
+                          <span className="absolute bottom-1 left-1 bg-pink-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">Principal</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeMedia(i)}
+                          className="absolute top-1 right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-3 h-3 text-white" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Área de upload */}
+                <label className={`flex flex-col items-center justify-center w-full border-2 border-dashed rounded-xl cursor-pointer transition-colors ${form.media.length > 0 ? "border-pink-500/50 bg-pink-500/5 hover:border-pink-500" : "border-neutral-700 bg-neutral-800 hover:border-pink-500/50"}`}>
+                  {uploadingMedia ? (
                     <div className="flex flex-col items-center py-6 gap-2">
                       <Loader2 className="w-6 h-6 text-pink-400 animate-spin" />
-                      <span className="text-xs text-neutral-400">Enviando...</span>
-                    </div>
-                  ) : form.image ? (
-                    <div className="relative w-full">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={form.image} alt="preview" className="w-full h-40 object-cover rounded-xl" />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-xl opacity-0 hover:opacity-100 transition-opacity">
-                        <span className="text-white text-xs font-bold">Clique para trocar</span>
-                      </div>
+                      <span className="text-xs text-neutral-400">Processando arquivos...</span>
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center py-8 gap-2">
-                      <ImageUp className="w-7 h-7 text-neutral-500" />
-                      <span className="text-sm text-neutral-400 font-medium">Clique para selecionar imagem</span>
-                      <span className="text-xs text-neutral-600">JPG, PNG, WEBP até 5MB</span>
+                    <div className="flex flex-col items-center py-6 gap-2">
+                      <ImageUp className="w-6 h-6 text-neutral-500" />
+                      <span className="text-sm text-neutral-400 font-medium">
+                        {form.media.length > 0 ? "Adicionar mais arquivos" : "Clique para selecionar"}
+                      </span>
+                      <span className="text-xs text-neutral-600 text-center">Imagens (JPG, PNG, WEBP…) e Vídeos (MP4, MOV, AVI, WEBM…)</span>
                     </div>
                   )}
                   <input
+                    ref={mediaInputRef}
                     type="file"
-                    accept="image/*,.heic,.heif,.avif,.webp,.jpg,.jpeg,.png,.gif,.bmp,.tiff,.svg"
+                    accept="image/*,video/*,.heic,.heif,.avif,.mkv,.avi,.mov,.mp4,.webm,.flv,.wmv,.m4v,.3gp,.ogv"
+                    multiple
                     className="hidden"
-                    required={!form.image}
+                    required={form.media.length === 0}
                     onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleImageUpload(file);
+                      if (e.target.files && e.target.files.length > 0) handleMediaUpload(e.target.files);
                       e.target.value = "";
                     }}
                   />
