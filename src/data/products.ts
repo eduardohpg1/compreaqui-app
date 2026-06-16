@@ -5,6 +5,7 @@ export interface Product {
   price?: string;
   originalPrice?: string;
   image: string;
+  media?: string[];
   affiliateLink: string;
   badge?: string;
   isHighlight?: boolean;

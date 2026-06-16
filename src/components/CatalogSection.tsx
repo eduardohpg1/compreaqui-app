@@ -12,6 +12,7 @@ interface DBProduct {
   price: string | null;
   original_price: string | null;
   image: string;
+  media: string[] | null;
   affiliate_link: string;
   badge: string | null;
   is_highlight: boolean;
@@ -56,6 +57,7 @@ export default function CatalogSection() {
     price: p.price ?? undefined,
     originalPrice: p.original_price ?? undefined,
     image: p.image,
+    media: p.media ?? undefined,
     affiliateLink: p.affiliate_link,
     badge: p.badge ?? undefined,
     isHighlight: p.is_highlight,
