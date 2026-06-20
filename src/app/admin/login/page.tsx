@@ -19,13 +19,15 @@ export default function LoginPage() {
     setError("");
 
     try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ijvqpcllvjuqghcrqfoz.supabase.co";
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlqdnFwY2xsdmp1cWdoY3JxZm96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MTQ2MzAsImV4cCI6MjA5NjQ5MDYzMH0.e-c7_5OCB_O4nVg7IoR1DbzIQgclzjq8sxhaZFrcGMI";
       const res = await fetch(
-        "https://ijvqpcllvjuqghcrqfoz.supabase.co/auth/v1/token?grant_type=password",
+        `${supabaseUrl}/auth/v1/token?grant_type=password`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "apikey": "sb_publishable_RM6a72wALQDNFV5wPoC1Dg_HPAqzEEC",
+            "apikey": supabaseKey,
           },
           body: JSON.stringify({ email, password }),
         }
