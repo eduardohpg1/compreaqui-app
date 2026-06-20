@@ -30,6 +30,8 @@ const emptyForm = {
   is_highlight: false,
 };
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ijvqpcllvjuqghcrqfoz.supabase.co";
+
 export default function AdminPage() {
   const router = useRouter();
 
@@ -61,10 +63,10 @@ export default function AdminPage() {
     const supabase = createClient();
     const { data, error } = await supabase
       .from("products")
-      .select("id,name,description,price,original_price,affiliate_link,badge,is_highlight")
+      .select("id,name,description,price,original_price,affiliate_link,badge,is_highlight,image,media")
       .order("created_at", { ascending: false });
     if (error) console.error("fetchProducts error:", error);
-    setProducts((data || []).map((p) => ({ ...p, image: "", media: null })));
+    setProducts(data || []);
     setLoading(false);
   }, []);
 
@@ -83,29 +85,19 @@ export default function AdminPage() {
 
   async function openEdit(p: Product) {
     setEditingId(p.id);
+    const existingMedia: string[] = [];
+    if (p.media && p.media.length > 0) existingMedia.push(...p.media);
+    else if (p.image) existingMedia.push(p.image);
     setForm({
       name: p.name,
       price: p.price || "",
       original_price: p.original_price || "",
-      media: [],
+      media: existingMedia,
       affiliate_link: p.affiliate_link,
       badge: p.badge || "",
       is_highlight: p.is_highlight,
     });
     setShowForm(true);
-    // Busca mídia separadamente para não estourar timeout na listagem
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("products")
-      .select("image,media")
-      .eq("id", p.id)
-      .single();
-    if (data) {
-      const existingMedia: string[] = [];
-      if (data.media && data.media.length > 0) existingMedia.push(...data.media);
-      else if (data.image) existingMedia.push(data.image);
-      setForm((f) => ({ ...f, media: existingMedia }));
-    }
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -142,27 +134,24 @@ export default function AdminPage() {
 
   async function handleMediaUpload(files: FileList) {
     setUploadingMedia(true);
-    const results: string[] = [];
+    const supabase = createClient();
+    const urls: string[] = [];
     const errors: string[] = [];
 
-    await Promise.all(Array.from(files).map((file) =>
-      new Promise<void>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const base64 = e.target?.result as string;
-          results.push(base64);
-          resolve();
-        };
-        reader.onerror = () => {
-          errors.push(file.name);
-          resolve();
-        };
-        reader.readAsDataURL(file);
-      })
-    ));
+    await Promise.all(Array.from(files).map(async (file) => {
+      const ext = file.name.split(".").pop() || "bin";
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from("products").upload(path, file, { upsert: false });
+      if (error) {
+        errors.push(file.name);
+      } else {
+        const url = `${SUPABASE_URL}/storage/v1/object/public/products/${path}`;
+        urls.push(url);
+      }
+    }));
 
-    if (errors.length) showToast(`Erro ao ler: ${errors.join(", ")}`, "error");
-    if (results.length) setForm((f) => ({ ...f, media: [...f.media, ...results] }));
+    if (errors.length) showToast(`Erro ao enviar: ${errors.join(", ")}`, "error");
+    if (urls.length) setForm((f) => ({ ...f, media: [...f.media, ...urls] }));
     setUploadingMedia(false);
   }
 
@@ -170,8 +159,8 @@ export default function AdminPage() {
     setForm((f) => ({ ...f, media: f.media.filter((_, i) => i !== index) }));
   }
 
-  function isVideo(dataUrl: string) {
-    return dataUrl.startsWith("data:video/");
+  function isVideo(url: string) {
+    return url.match(/\.(mp4|mov|avi|webm|mkv|flv|wmv|m4v|3gp|ogv)(\?.*)?$/i) !== null || url.startsWith("data:video/");
   }
 
   async function handleDelete(id: number) {
@@ -242,14 +231,13 @@ export default function AdminPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {products.map((p) => (
-              <div key={p.id} className="bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden hover:border-neutral-700 transition-colors">
-                <div className="relative aspect-square bg-neutral-800">
-                  {(() => {
-                    const thumb = (p.media && p.media.length > 0) ? p.media[0] : p.image;
-                    if (!thumb) return null;
-                    if (thumb.startsWith("data:video/")) {
-                      return (
+            {products.map((p) => {
+              const thumb = (p.media && p.media.length > 0) ? p.media[0] : p.image;
+              return (
+                <div key={p.id} className="bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden hover:border-neutral-700 transition-colors">
+                  <div className="relative aspect-square bg-neutral-800">
+                    {thumb ? (
+                      isVideo(thumb) ? (
                         <div className="relative w-full h-full">
                           <video src={thumb} className="w-full h-full object-cover" muted playsInline />
                           <div className="absolute inset-0 flex items-center justify-center">
@@ -258,36 +246,37 @@ export default function AdminPage() {
                             </div>
                           </div>
                         </div>
-                      );
-                    }
-                    // eslint-disable-next-line @next/next/no-img-element
-                    return <img src={thumb} alt={p.name} className="w-full h-full object-cover" />;
-                  })()}
-                  {p.media && p.media.length > 1 && (
-                    <span className="absolute bottom-1.5 right-1.5 bg-black/70 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                      +{p.media.length - 1}
-                    </span>
-                  )}
-                  {p.badge && (
-                    <span className="absolute top-2 left-2 bg-pink-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                      {p.badge}
-                    </span>
-                  )}
-                </div>
-                <div className="p-4">
-                  <h3 className="text-sm font-semibold text-white line-clamp-1 mb-1">{p.name}</h3>
-                  {p.price && <p className="text-pink-400 font-bold text-sm mb-3">{p.price}</p>}
-                  <div className="flex gap-2">
-                    <button onClick={() => openEdit(p)} className="flex-1 flex items-center justify-center gap-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-medium py-2 rounded-lg transition">
-                      <Pencil className="w-3 h-3" /> Editar
-                    </button>
-                    <button onClick={() => setDeleteConfirm(p.id)} className="flex items-center justify-center gap-1.5 bg-neutral-800 hover:bg-red-500/20 text-neutral-500 hover:text-red-400 text-xs font-medium px-3 py-2 rounded-lg transition">
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                      ) : (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={thumb} alt={p.name} className="w-full h-full object-cover" />
+                      )
+                    ) : null}
+                    {p.media && p.media.length > 1 && (
+                      <span className="absolute bottom-1.5 right-1.5 bg-black/70 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                        +{p.media.length - 1}
+                      </span>
+                    )}
+                    {p.badge && (
+                      <span className="absolute top-2 left-2 bg-pink-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                        {p.badge}
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <h3 className="text-sm font-semibold text-white line-clamp-1 mb-1">{p.name}</h3>
+                    {p.price && <p className="text-pink-400 font-bold text-sm mb-3">{p.price}</p>}
+                    <div className="flex gap-2">
+                      <button onClick={() => openEdit(p)} className="flex-1 flex items-center justify-center gap-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-medium py-2 rounded-lg transition">
+                        <Pencil className="w-3 h-3" /> Editar
+                      </button>
+                      <button onClick={() => setDeleteConfirm(p.id)} className="flex items-center justify-center gap-1.5 bg-neutral-800 hover:bg-red-500/20 text-neutral-500 hover:text-red-400 text-xs font-medium px-3 py-2 rounded-lg transition">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -371,18 +360,16 @@ export default function AdminPage() {
               {/* Upload de mídia */}
               <div>
                 <label className="text-neutral-400 text-xs font-medium mb-1.5 block">
-                  Imagens e vídeos *
+                  Imagens e vídeos
                   <span className="ml-2 text-neutral-600 font-normal">({form.media.length} arquivo{form.media.length !== 1 ? "s" : ""})</span>
                 </label>
 
-                {/* Galeria de miniaturas */}
                 {form.media.length > 0 && (
                   <div className="grid grid-cols-3 gap-2 mb-3">
                     {form.media.map((src, i) => (
                       <div key={i} className="relative group aspect-square rounded-xl overflow-hidden bg-neutral-800 border border-neutral-700">
                         {isVideo(src) ? (
                           <>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <video src={src} className="w-full h-full object-cover" muted playsInline />
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                               <div className="bg-black/50 rounded-full p-1.5">
@@ -409,12 +396,11 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                {/* Área de upload */}
                 <label className={`flex flex-col items-center justify-center w-full border-2 border-dashed rounded-xl cursor-pointer transition-colors ${form.media.length > 0 ? "border-pink-500/50 bg-pink-500/5 hover:border-pink-500" : "border-neutral-700 bg-neutral-800 hover:border-pink-500/50"}`}>
                   {uploadingMedia ? (
                     <div className="flex flex-col items-center py-6 gap-2">
                       <Loader2 className="w-6 h-6 text-pink-400 animate-spin" />
-                      <span className="text-xs text-neutral-400">Processando arquivos...</span>
+                      <span className="text-xs text-neutral-400">Enviando arquivos...</span>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center py-6 gap-2">
@@ -422,7 +408,7 @@ export default function AdminPage() {
                       <span className="text-sm text-neutral-400 font-medium">
                         {form.media.length > 0 ? "Adicionar mais arquivos" : "Clique para selecionar"}
                       </span>
-                      <span className="text-xs text-neutral-600 text-center">Imagens (JPG, PNG, WEBP…) e Vídeos (MP4, MOV, AVI, WEBM…)</span>
+                      <span className="text-xs text-neutral-600 text-center">Imagens (JPG, PNG, WEBP…) e Vídeos (MP4, MOV, AVI…)</span>
                     </div>
                   )}
                   <input
@@ -431,7 +417,6 @@ export default function AdminPage() {
                     accept="image/*,video/*,.heic,.heif,.avif,.mkv,.avi,.mov,.mp4,.webm,.flv,.wmv,.m4v,.3gp,.ogv"
                     multiple
                     className="hidden"
-                    required={form.media.length === 0}
                     onChange={(e) => {
                       if (e.target.files && e.target.files.length > 0) handleMediaUpload(e.target.files);
                       e.target.value = "";

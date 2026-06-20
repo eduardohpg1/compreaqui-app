@@ -30,7 +30,7 @@ export default function CatalogSection() {
     const supabase = createClient();
     supabase
       .from("products")
-      .select("*")
+      .select("id,name,description,price,original_price,image,media,affiliate_link,badge,is_highlight")
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
         if (error) console.error("Erro ao carregar produtos:", error.message);
