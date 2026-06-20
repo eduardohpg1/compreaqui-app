@@ -26,7 +26,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   }
 
   const currentSrc = mediaList[current] ?? "";
-  const isVideo = currentSrc.startsWith("data:video/");
+  const isVideo = currentSrc.startsWith("data:video/") || /\.(mp4|mov|avi|webm|mkv|flv|wmv|m4v|3gp|ogv)(\?.*)?$/i.test(currentSrc);
 
   return (
     <div className="group bg-white rounded-3xl overflow-hidden border-2 border-neutral-100 hover:border-[#ff2d78]/30 shadow-md hover:shadow-2xl hover:shadow-pink-100 transition-all duration-300 hover:-translate-y-1.5 flex flex-col relative">
@@ -107,7 +107,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               onClick={() => setCurrent(i)}
               className={`flex-shrink-0 w-10 h-10 rounded-lg overflow-hidden border-2 transition-all ${i === current ? "border-[#ff2d78]" : "border-transparent opacity-60 hover:opacity-100"}`}
             >
-              {src.startsWith("data:video/") ? (
+              {src.startsWith("data:video/") || /\.(mp4|mov|avi|webm|mkv|flv|wmv|m4v|3gp|ogv)(\?.*)?$/i.test(src) ? (
                 <video src={src} className="w-full h-full object-cover" muted playsInline />
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element
