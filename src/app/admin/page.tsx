@@ -59,8 +59,12 @@ export default function AdminPage() {
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     const supabase = createClient();
-    const { data } = await supabase.from("products").select("*").order("created_at", { ascending: false });
-    setProducts(data || []);
+    const { data, error } = await supabase
+      .from("products")
+      .select("id,name,description,price,original_price,affiliate_link,badge,is_highlight")
+      .order("created_at", { ascending: false });
+    if (error) console.error("fetchProducts error:", error);
+    setProducts((data || []).map((p) => ({ ...p, image: "", media: null })));
     setLoading(false);
   }, []);
 
@@ -77,24 +81,31 @@ export default function AdminPage() {
     setShowForm(true);
   }
 
-  function openEdit(p: Product) {
-    const existingMedia: string[] = [];
-    if (p.media && p.media.length > 0) {
-      existingMedia.push(...p.media);
-    } else if (p.image) {
-      existingMedia.push(p.image);
-    }
+  async function openEdit(p: Product) {
+    setEditingId(p.id);
     setForm({
       name: p.name,
       price: p.price || "",
       original_price: p.original_price || "",
-      media: existingMedia,
+      media: [],
       affiliate_link: p.affiliate_link,
       badge: p.badge || "",
       is_highlight: p.is_highlight,
     });
-    setEditingId(p.id);
     setShowForm(true);
+    // Busca mídia separadamente para não estourar timeout na listagem
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("products")
+      .select("image,media")
+      .eq("id", p.id)
+      .single();
+    if (data) {
+      const existingMedia: string[] = [];
+      if (data.media && data.media.length > 0) existingMedia.push(...data.media);
+      else if (data.image) existingMedia.push(data.image);
+      setForm((f) => ({ ...f, media: existingMedia }));
+    }
   }
 
   async function handleSave(e: React.FormEvent) {
